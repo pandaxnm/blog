@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="generator" content="Hexo 4.2.1"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta><title>Redis持久化 - 笔记 - 小熊</title><meta description="正如我们知道的，Redis的数据全部存储在内存中，如果宕机就会导致数据丢失，所以需要一种机制来保障数据不丢失或只丢失很少一部分。"><meta property="og:type" content="blog"><meta property="og:title" content="Redis持久化 - 笔记"><meta property="og:url" content="http://yoursite.com/2019/10/06/redis-rdb-aof/"><meta property="og:site_name" content="小熊"><meta property="og:description" content="正如我们知道的，Redis的数据全部存储在内存中，如果宕机就会导致数据丢失，所以需要一种机制来保障数据不丢失或只丢失很少一部分。"><meta property="og:locale" content="zh_CN"><meta property="og:image" content="http://yoursite.com/img/og_image.png"><meta property="article:published_time" content="2019-10-06T09:53:54.000Z"><meta property="article:modified_time" content="2020-07-16T13:59:13.911Z"><meta property="article:author" content="John Doe"><meta property="twitter:card" content="summary"><meta property="twitter:image" content="/img/og_image.png"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"http://yoursite.com/2019/10/06/redis-rdb-aof/"},"headline":"小熊","image":["http://yoursite.com/img/og_image.png"],"datePublished":"2019-10-06T09:53:54.000Z","dateModified":"2020-07-16T13:59:13.911Z","author":{"@type":"Person","name":"John Doe"},"description":"正如我们知道的，Redis的数据全部存储在内存中，如果宕机就会导致数据丢失，所以需要一种机制来保障数据不丢失或只丢失很少一部分。"}</script><link rel="canonical" href="http://yoursite.com/2019/10/06/redis-rdb-aof/"><link rel="icon" href="/img/icon.ico"><link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.0/css/all.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.12.0/styles/atom-one-light.css"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><!--!--><!--!--><!--!--><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/css/lightgallery.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/css/justifiedGallery.min.css"><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script></head><body class="is-2-column"><nav class="navbar navbar-main"><div class="container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/"><img src="/img/blog-icon.png" alt="小熊" height="28"></a></div><div class="navbar-menu"><div class="navbar-start"><a class="navbar-item" href="/">首页</a><a class="navbar-item" href="/archives">归档</a><a class="navbar-item" href="/categories">分类</a><a class="navbar-item" href="/tags">标签</a><a class="navbar-item" href="/about">关于</a></div><div class="navbar-end"><a class="navbar-item" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/ppoffice/hexo-theme-icarus"><i class="fab fa-github"></i></a><a class="navbar-item search" title="搜索" href="javascript:;"><i class="fas fa-search"></i></a></div></div></div></nav><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-8-tablet is-8-desktop is-8-widescreen"><div class="card"><article class="card-content article" role="article"><div class="article-meta size-small is-uppercase level is-mobile"><div class="level-left"><time class="level-item" dateTime="2019-10-06T09:53:54.000Z" title="2019-10-06T09:53:54.000Z">2019-10-06</time></div></div><h1 class="title is-3 is-size-4-mobile">Redis持久化 - 笔记</h1><div class="content"><p>正如我们知道的，Redis的数据全部存储在内存中，如果宕机就会导致数据丢失，所以需要一种机制来保障数据不丢失或只丢失很少一部分。</p>
+<a id="more"></a>
+
+<p>Redis目前支持两种持久化方式，<code>RDB</code> 和 <code>AOF</code>。</p>
+<h2 id="RDB"><a href="#RDB" class="headerlink" title="RDB"></a>RDB</h2><h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>RDB 持久化方式会保存Redis在特定时间节点的数据，生成RDB快照文件。</p>
+<h3 id="工作原理"><a href="#工作原理" class="headerlink" title="工作原理"></a>工作原理</h3><ul>
+<li>fork 子进程</li>
+<li>子进程将数据写到临时文件</li>
+<li>用临时文件替换旧RDB文件</li>
+</ul>
+<p><strong>手动触发：</strong>  </p>
+<ul>
+<li><code>save</code>：会阻塞当前Redis服务器，直到持久化完成，线上应该禁止使用。</li>
+<li><code>bgsave</code>：该触发方式会fork一个子进程，由子进程负责持久化过程，因此阻塞只会发生在fork子进程的时候。</li>
+</ul>
+<p><strong>自动触发：</strong>  </p>
+<ul>
+<li>根据我们的 <code>save m n</code> 配置规则自动触发；</li>
+<li>从节点全量复制时，主节点发送rdb文件给从节点完成复制操作，主节点会触发 <code>bgsav</code>e；</li>
+<li>执行 <code>debug reload</code> 时；</li>
+<li>执行  <code>shutdown</code> 时，如果没有开启aof，也会触发。</li>
+</ul>
+<h3 id="优点"><a href="#优点" class="headerlink" title="优点"></a>优点</h3><ul>
+<li>RDB是一个简洁的、压缩过的二进制文件，保存了Redis在某个时间点的数据，很适合做冷备，可以很方便的恢复到不同版本。</li>
+<li>数据恢复时，RDB比AOF速度更快</li>
+</ul>
+<h3 id="缺点"><a href="#缺点" class="headerlink" title="缺点"></a>缺点</h3><ul>
+<li>RDB按时间节点保存文件，可能导致数据丢失过多。</li>
+<li>RDB通过fork子进程产生持久化文件，如果数据量太大，会造成阻塞。</li>
+</ul>
+<h3 id="命令"><a href="#命令" class="headerlink" title="命令"></a>命令</h3><p><code>save</code><br>同步、阻塞</p>
+<p><code>bgsave</code><br>异步非阻塞，主进程会fork一个子进程来完成 bgsave 生成RDB文件，但在fork子进程的过程中，主进程会阻塞，无法响应客户端的请求。</p>
+<p>配置</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"># 时间策略</span><br><span class="line">save 900 1</span><br><span class="line">save 300 10</span><br><span class="line">save 60 10000</span><br><span class="line"></span><br><span class="line"># 文件名称</span><br><span class="line">dbfilename dump.rdb</span><br><span class="line"></span><br><span class="line"># 文件保存路径</span><br><span class="line">dir &#x2F;home&#x2F;work&#x2F;app&#x2F;redis&#x2F;data&#x2F;</span><br><span class="line"></span><br><span class="line"># 如果持久化出错，主进程是否停止写入</span><br><span class="line">stop-writes-on-bgsave-error yes</span><br><span class="line"></span><br><span class="line"># 是否压缩</span><br><span class="line">rdbcompression yes</span><br><span class="line"></span><br><span class="line"># 导入时是否检查</span><br><span class="line">rdbchecksum yes</span><br></pre></td></tr></table></figure>
+
+<h2 id="AOF-（append-only-file）"><a href="#AOF-（append-only-file）" class="headerlink" title="AOF （append only file）"></a>AOF （append only file）</h2><h3 id="简介-1"><a href="#简介-1" class="headerlink" title="简介"></a>简介</h3><p>AOF 持久化方式会记录Redis的所有命令请求，以追加的方式写到指定文件里。</p>
+<h3 id="工作原理-1"><a href="#工作原理-1" class="headerlink" title="工作原理"></a>工作原理</h3><ul>
+<li>命令写入</li>
+<li>追加到aof_buf</li>
+<li>同步到aof磁盘</li>
+</ul>
+<h3 id="优点-1"><a href="#优点-1" class="headerlink" title="优点"></a>优点</h3><ul>
+<li>AOF 比 RDB更可靠，最多丢失1秒钟的数据</li>
+<li>AOF 文件如遇断电，可以通过 <code>redis-check-aof -fix filename</code> 来进行修复</li>
+<li>AOF 文件体积如果太大，可以进行重写然后替换旧文件。（重写时旧文件仍客追加命令，数据是从redis读取的，不会对旧文件进行操作）</li>
+<li>AOF文件是可读的，是以Redis命令协议追加到文件的。</li>
+</ul>
+<h3 id="缺点-1"><a href="#缺点-1" class="headerlink" title="缺点"></a>缺点</h3><ul>
+<li>相同的数据，AOF比RDB体积更大</li>
+<li>恢复数据时AOF比RDB更慢</li>
+</ul>
+<h3 id="命令-1"><a href="#命令-1" class="headerlink" title="命令"></a>命令</h3><p>重写  <code>BGREWRITEAOF</code></p>
+<p>配置</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"># 是否开启aof</span><br><span class="line">appendonly yes</span><br><span class="line"></span><br><span class="line"># 文件名称</span><br><span class="line">appendfilename &quot;appendonly.aof&quot;</span><br><span class="line"></span><br><span class="line"># 同步方式</span><br><span class="line">appendfsync everysec</span><br><span class="line"></span><br><span class="line"># aof重写期间是否同步</span><br><span class="line">no-appendfsync-on-rewrite no</span><br><span class="line"></span><br><span class="line"># 重写触发配置</span><br><span class="line">auto-aof-rewrite-percentage 100</span><br><span class="line">auto-aof-rewrite-min-size 64mb</span><br><span class="line"></span><br><span class="line"># 加载aof时如果有错如何处理</span><br><span class="line">aof-load-truncated yes</span><br><span class="line"></span><br><span class="line"># 文件重写策略</span><br><span class="line">aof-rewrite-incremental-fsync yes</span><br></pre></td></tr></table></figure>
+
+<h2 id="AOF-重写"><a href="#AOF-重写" class="headerlink" title="AOF 重写"></a>AOF 重写</h2><p>工作原理</p>
+<ul>
+<li>fork子进程</li>
+<li>子进程把新的AOF文件写到临时文件</li>
+<li>主进程将此期间的命令写到 复制缓冲区和旧的AOF文件里</li>
+<li>子进程重写完成后，再将缓冲区里的命令追加到AOF文件中</li>
+<li>替换旧的AOF文件</li>
+</ul>
+<blockquote>
+<p>Redis 2.4之后的版本才可以自动进行日志重写，之前的版本需要手动运行BGREWRITEAOF这个命令。</p>
+</blockquote>
+<p><code>appendfsync everysec</code> 它其实有三种模式:</p>
+<ul>
+<li><code>always</code>：把每个写命令都立即同步到aof，很慢，但是很安全</li>
+<li><code>everysec</code>：每秒同步一次，是折中方案</li>
+<li><code>no</code>：redis不处理交给OS来处理，非常快，但是也最不安全</li>
+</ul>
+<p>注意点：</p>
+<ul>
+<li>在重写期间，由于主进程依然在响应命令，为了保证最终备份的完整性；因此它依然会写入旧的AOF file中，如果重写失败，能够保证数据不丢失。</li>
+<li>为了把重写期间响应的写入信息也写入到新的文件中，因此也会为子进程保留一个buf，防止新写的file丢失数据。</li>
+<li>重写是直接把当前内存的数据生成对应命令，并不需要读取老的AOF文件进行分析、命令合并。</li>
+<li>AOF文件直接采用的文本协议，主要是兼容性好、追加方便、可读性高可认为修改修复。</li>
+</ul>
+<h2 id="数据恢复"><a href="#数据恢复" class="headerlink" title="数据恢复"></a>数据恢复</h2><p>重启Redis时，优先加载AOF文件，如果不存在则加载RDB文件</p>
+<h2 id="性能与实践"><a href="#性能与实践" class="headerlink" title="性能与实践"></a>性能与实践</h2><p>通过上面的分析，我们都知道RDB的快照、AOF的重写都需要fork，这是一个重量级操作，会对Redis造成阻塞。因此为了不影响Redis主进程响应，我们需要尽可能降低阻塞。</p>
+<ol>
+<li>降低fork的频率，比如可以手动来触发RDB生成快照、与AOF重写；</li>
+<li>控制Redis最大使用内存，防止fork耗时过长；</li>
+<li>使用更牛逼的硬件；</li>
+<li>合理配置Linux的内存分配策略，避免因为物理内存不足导致fork失败。</li>
+</ol>
+<p>在线上我们到底该怎么做：</p>
+<ol>
+<li>如果Redis中的数据并不是特别敏感或者可以通过其它方式重写生成数据，可以关闭持久化，如果丢失数据可以通过其它途径补回；</li>
+<li>自己制定策略定期检查Redis的情况，然后可以手动触发备份、重写数据；</li>
+<li>单机如果部署多个实例，要防止多个机器同时运行持久化、重写操作，防止出现内存、CPU、IO资源竞争，让持久化变为串行；</li>
+<li>可以加入主从机器，利用一台从机器进行备份处理，其它机器正常响应客户端的命令；</li>
+<li>RDB持久化与AOF持久化可以同时存在，配合使用。</li>
+</ol>
+<blockquote>
+<p>文章内容收集自网络</p>
+</blockquote>
+</div><!--!--></article></div><!--!--><nav class="post-navigation mt-4 level is-mobile"><div class="level-start"><a class="article-nav-prev level level-item link-muted" href="/2019/11/13/tcp-udp/"><i class="level-item fas fa-chevron-left"></i><span class="level-item">TCP、UDP协议及其区别</span></a></div></nav><!--!--></div><div class="column column-left is-4-tablet is-4-desktop is-4-widescreen  order-1"><div class="card widget"><div class="card-content"><nav class="level"><div class="level-item has-text-centered flex-shrink-1"><div><figure class="image is-128x128 mx-auto mb-2"><img class="avatar is-rounded" src="http://images.mokeee.com/20200219002636.jpg" alt="Pandaxnm"></figure><p class="title is-size-4 is-block line-height-inherit">Pandaxnm</p><p class="is-size-6 is-block">折腾不止</p><p class="is-size-6 is-flex justify-content-center"><i class="fas fa-map-marker-alt mr-1"></i><span>北京</span></p></div></div></nav><nav class="level is-mobile"><div class="level-item has-text-centered is-marginless"><div><p class="heading">文章</p><a href="/archives"><p class="title">5</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">分类</p><a href="/categories"><p class="title">2</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">标签</p><a href="/tags"><p class="title">1</p></a></div></div></nav><div class="level"><a class="level-item button is-primary is-rounded" href="https://github.com/pandaxnm" target="_blank" rel="noopener">关注我</a></div><div class="level is-mobile"><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="Github" href="https://github.com/pandaxnm"><i class="fab fa-github"></i></a><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="RSS" href="/"><i class="fas fa-rss"></i></a></div></div></div><!--!--><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">链接</h3><ul class="menu-list"><li><a class="level is-mobile is-mobile" href="https://hexo.io" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Hexo</span></span><span class="level-right"><span class="level-item tag">hexo.io</span></span></a></li><li><a class="level is-mobile is-mobile" href="https://bulma.io" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Bulma</span></span><span class="level-right"><span class="level-item tag">bulma.io</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">分类</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/categories/MongoDB/"><span class="level-start"><span class="level-item">MongoDB</span></span><span class="level-end"><span class="level-item tag">2</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/React-Native/"><span class="level-start"><span class="level-item">React Native</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><h3 class="menu-label">最新文章</h3><article class="media"><div class="media-content size-small"><p><time dateTime="2020-02-29T08:45:35.000Z">2020-02-29</time></p><p class="title is-6"><a class="link-muted" href="/2020/02/29/mongodb-install/">MongoDB安装和简单实用</a></p><p class="is-uppercase"><a class="link-muted" href="/categories/MongoDB/">MongoDB</a></p></div></article><article class="media"><div class="media-content size-small"><p><time dateTime="2020-02-29T07:18:33.000Z">2020-02-29</time></p><p class="title is-6"><a class="link-muted" href="/2020/02/29/react-native-theme/">React Native实现主题切换</a></p><p class="is-uppercase"><a class="link-muted" href="/categories/React-Native/">React Native</a></p></div></article><article class="media"><div class="media-content size-small"><p><time dateTime="2020-01-06T06:05:37.000Z">2020-01-06</time></p><p class="title is-6"><a class="link-muted" href="/2020/01/06/mongodb-charts/">MongoDB-Charts可视化图表分析工具安装使用</a></p><p class="is-uppercase"><a class="link-muted" href="/categories/MongoDB/">MongoDB</a></p></div></article><article class="media"><div class="media-content size-small"><p><time dateTime="2019-11-13T13:02:29.000Z">2019-11-13</time></p><p class="title is-6"><a class="link-muted" href="/2019/11/13/tcp-udp/">TCP、UDP协议及其区别</a></p><p class="is-uppercase"></p></div></article><article class="media"><div class="media-content size-small"><p><time dateTime="2019-10-06T09:53:54.000Z">2019-10-06</time></p><p class="title is-6"><a class="link-muted" href="/2019/10/06/redis-rdb-aof/">Redis持久化 - 笔记</a></p><p class="is-uppercase"></p></div></article></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">归档</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/archives/2020/02/"><span class="level-start"><span class="level-item">二月 2020</span></span><span class="level-end"><span class="level-item tag">2</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2020/01/"><span class="level-start"><span class="level-item">一月 2020</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2019/11/"><span class="level-start"><span class="level-item">十一月 2019</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2019/10/"><span class="level-start"><span class="level-item">十月 2019</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">标签</h3><div class="field is-grouped is-grouped-multiline"><div class="control"><a class="tags has-addons" href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"><span class="tag">数据库</span><span class="tag is-grey-lightest">1</span></a></div></div></div></div></div></div><!--!--></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/"><img src="/img/blog-icon.png" alt="小熊" height="28"></a><p class="size-small"><span>&copy; 2020 John Doe</span>  Powered by <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank" rel="noopener">Icarus</a></p></div><div class="level-end"><div class="field has-addons"><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Attribution 4.0 International" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/ppoffice/hexo-theme-icarus"><i class="fab fa-github"></i></a></p></div></div></div></div></footer><script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/min/moment-with-locales.min.js"></script><script>moment.locale("zh-CN");</script><script>var IcarusThemeSettings = {
+            site: {
+                url: 'http://yoursite.com',
+                external_link: {"enable":true,"exclude":[]}
+            },
+            article: {
+                highlight: {
+                    clipboard: true,
+                    fold: 'unfolded'
+                }
+            }
+        };</script><script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js" defer></script><a id="back-to-top" title="回到顶端" href="javascript:;"><i class="fas fa-chevron-up"></i></a><script src="/js/back_to_top.js" defer></script><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/js/lightgallery.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js" defer></script><script>window.addEventListener("load", () => {
+            if (typeof $.fn.lightGallery === 'function') {
+                $('.article').lightGallery({ selector: '.gallery-item' });
+            }
+            if (typeof $.fn.justifiedGallery === 'function') {
+                if ($('.justified-gallery > p > .gallery-item').length) {
+                    $('.justified-gallery > p > .gallery-item').unwrap();
+                }
+                $('.justified-gallery').justifiedGallery();
+            }
+        });</script><!--!--><!--!--><!--!--><script src="/js/main.js" defer></script><div class="searchbox"><div class="searchbox-container"><div class="searchbox-header"><div class="searchbox-input-container"><input class="searchbox-input" type="text" placeholder="想要查找什么..."></div><a class="searchbox-close" href="javascript:;">×</a></div><div class="searchbox-body"></div></div></div><script src="/js/insight.js" defer></script><script>document.addEventListener('DOMContentLoaded', function () {
+            loadInsight({"contentUrl":"/content.json"}, {"hint":"想要查找什么...","untitled":"(无标题)","posts":"文章","pages":"页面","categories":"分类","tags":"标签"});
+        });</script></body></html>

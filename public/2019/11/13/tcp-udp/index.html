@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="generator" content="Hexo 4.2.1"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta><title>TCP、UDP协议及其区别 - 小熊</title><meta description="一、TCP&amp;#x2F;IP 网络模型 计算机与网络设备要相互通信，双方就必须基于相同的方法。比如，如何探测到通信目标、由哪一边先发起通信、使用哪种语言进行通信、怎样结束通信等规则都需要事先确定。不同的硬件、操作系统之前的通信，所有的这一切都需要一种规则。而我们就把这种规则称为协议（Protocol）."><meta property="og:type" content="blog"><meta property="og:title" content="TCP、UDP协议及其区别"><meta property="og:url" content="http://yoursite.com/2019/11/13/tcp-udp/"><meta property="og:site_name" content="小熊"><meta property="og:description" content="一、TCP&amp;#x2F;IP 网络模型 计算机与网络设备要相互通信，双方就必须基于相同的方法。比如，如何探测到通信目标、由哪一边先发起通信、使用哪种语言进行通信、怎样结束通信等规则都需要事先确定。不同的硬件、操作系统之前的通信，所有的这一切都需要一种规则。而我们就把这种规则称为协议（Protocol）."><meta property="og:locale" content="zh_CN"><meta property="og:image" content="http://note.youdao.com/yws/res/2875/4E0D55B7D7974D7196917E5F10AC2691"><meta property="og:image" content="http://note.youdao.com/yws/res/2798/6C1054297FA3444FB2587617E297BA91"><meta property="og:image" content="http://note.youdao.com/yws/res/2916/A2D28B6AB7B64D3C914C89C98779328E"><meta property="og:image" content="http://note.youdao.com/yws/res/2923/DFEB4631C59F4C24AA5C9B56F1E95301"><meta property="og:image" content="http://note.youdao.com/yws/res/2809/EB331E3E0A29497DA13ACAF949E2CB5E"><meta property="og:image" content="http://note.youdao.com/yws/res/2817/BEFE8B7032EC492680B0FA2ED2128587"><meta property="article:published_time" content="2019-11-13T13:02:29.000Z"><meta property="article:modified_time" content="2020-07-16T14:05:28.100Z"><meta property="article:author" content="John Doe"><meta property="twitter:card" content="summary"><meta property="twitter:image" content="http://note.youdao.com/yws/res/2875/4E0D55B7D7974D7196917E5F10AC2691"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"http://yoursite.com/2019/11/13/tcp-udp/"},"headline":"小熊","image":[],"datePublished":"2019-11-13T13:02:29.000Z","dateModified":"2020-07-16T14:05:28.100Z","author":{"@type":"Person","name":"John Doe"},"description":"一、TCP&#x2F;IP 网络模型 计算机与网络设备要相互通信，双方就必须基于相同的方法。比如，如何探测到通信目标、由哪一边先发起通信、使用哪种语言进行通信、怎样结束通信等规则都需要事先确定。不同的硬件、操作系统之前的通信，所有的这一切都需要一种规则。而我们就把这种规则称为协议（Protocol）."}</script><link rel="canonical" href="http://yoursite.com/2019/11/13/tcp-udp/"><link rel="icon" href="/img/icon.ico"><link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.0/css/all.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.12.0/styles/atom-one-light.css"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><!--!--><!--!--><!--!--><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/css/lightgallery.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/css/justifiedGallery.min.css"><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script></head><body class="is-2-column"><nav class="navbar navbar-main"><div class="container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/"><img src="/img/blog-icon.png" alt="小熊" height="28"></a></div><div class="navbar-menu"><div class="navbar-start"><a class="navbar-item" href="/">首页</a><a class="navbar-item" href="/archives">归档</a><a class="navbar-item" href="/categories">分类</a><a class="navbar-item" href="/tags">标签</a><a class="navbar-item" href="/about">关于</a></div><div class="navbar-end"><a class="navbar-item" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/ppoffice/hexo-theme-icarus"><i class="fab fa-github"></i></a><a class="navbar-item search" title="搜索" href="javascript:;"><i class="fas fa-search"></i></a></div></div></div></nav><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-8-tablet is-8-desktop is-8-widescreen"><div class="card"><article class="card-content article" role="article"><div class="article-meta size-small is-uppercase level is-mobile"><div class="level-left"><time class="level-item" dateTime="2019-11-13T13:02:29.000Z" title="2019-11-13T13:02:29.000Z">2019-11-13</time></div></div><h1 class="title is-3 is-size-4-mobile">TCP、UDP协议及其区别</h1><div class="content"><h2 id="一、TCP-IP-网络模型"><a href="#一、TCP-IP-网络模型" class="headerlink" title="一、TCP/IP 网络模型"></a>一、TCP/IP 网络模型</h2><p> 计算机与网络设备要相互通信，双方就必须基于相同的方法。比如，如何探测到通信目标、由哪一边先发起通信、使用哪种语言进行通信、怎样结束通信等规则都需要事先确定。不同的硬件、操作系统之前的通信，所有的这一切都需要一种规则。而我们就把这种规则称为协议（Protocol）.<br> <a id="more"></a><br> TCP/IP是互联网相关各类协议族的总称，比如：TCP、UDP、IP、FTP、ICMP、SMTP等。</p>
+<p> TCP/IP模型是互联网的基础，他是一系列网络协议的总称。这些协议可以划分为四层，分别为链路层、网络层、传输层和应用层。</p>
+<ul>
+<li>链路层：负责封装和解封装IP报文，发送和接收ARP/RARP报文等。</li>
+<li>网络层：负责路由以及把分组报文发送给目标网络或主机。</li>
+<li>传输层：负责对报文进行分组和重组，并以TCP或UDP协议格式封装报文。</li>
+<li>应用层：负责向用户提供应用程序，比如HTTP、FTP、Telnet、DNS、SMTP等。</li>
+</ul>
+<p><img src="http://note.youdao.com/yws/res/2875/4E0D55B7D7974D7196917E5F10AC2691" alt="image"></p>
+<p><img src="http://note.youdao.com/yws/res/2798/6C1054297FA3444FB2587617E297BA91" alt="image"></p>
+<p>在网络体系结构中网络通信的建立必须是在通信双方对等层进行，不能交错。在整个数据传输过程中，数据在发送端时、经过各层时都要附上响应层的协议头和协议尾（仅数据链路层需要封装协议尾）部分，也就是要对数据进行协议封装，以标识对应层所用的通信协议</p>
+<h2 id="二、UDP-User-Data-Protocol-用户数据报协议"><a href="#二、UDP-User-Data-Protocol-用户数据报协议" class="headerlink" title="二、UDP(User Data Protocol,用户数据报协议)"></a>二、UDP(User Data Protocol,用户数据报协议)</h2><p>UDP协议的全称是用户数据报协议，在网络中他与TCP协议一样用于处理数据包，是一种无连接的协议。在OSI模型中，在第四层——传输层，处于IP协议的上一层。UDP有不提供数据包分组、组装和不能对数据包进行排序的缺点，也就是说，当报文发送之后，是无法得知其是否安全完整到达的。</p>
+<h3 id="1-面向无连接"><a href="#1-面向无连接" class="headerlink" title="1. 面向无连接"></a>1. 面向无连接</h3><p>首先UDP是不需要和TCP一样在发送数据前进行三次握手建立连接的，想发数据就可以开始发送。并且也只是数据报文的搬运工，不会对数据报文进行任何拆分和拼接工操作。</p>
+<p>具体来说就是：</p>
+<ul>
+<li>在发送端，应用层将数据传递给传输层的UDP协议，UDP只会给数据增加一个UDP头标识下时UDP协议，然后就传递给网络层了。</li>
+<li>在接收端，网络层将数据传递给传输层，UDP只去除IP报文头就传递给应用层，不会做任何拼接操作。</li>
+</ul>
+<h3 id="2-有单播、多播、广播的功能"><a href="#2-有单播、多播、广播的功能" class="headerlink" title="2. 有单播、多播、广播的功能"></a>2. 有单播、多播、广播的功能</h3><p>UDP不止支持一对一的传输方式，同样支持一对多、多对多、多对一的方式，也就是说UDP提供了单播、多播、广播的功能。</p>
+<h3 id="3-UDP是面向报文的"><a href="#3-UDP是面向报文的" class="headerlink" title="3. UDP是面向报文的"></a>3. UDP是面向报文的</h3><p>发送方的UDP对应用程序交下来的报文，在添加首部后就向下交付IP层。UDP对应用层交下来的报文，既不合并，也不拆分，而是保留这些报文的边界。因此，应用程序必须选择合适大小的报文。</p>
+<h3 id="4-不可靠性"><a href="#4-不可靠性" class="headerlink" title="4. 不可靠性"></a>4. 不可靠性</h3><p>首先不可靠性体现在无连接上，通信都不需要建立连接，想发就发，这样的情况肯定不可靠。<br>并且收到什么数据就传递什么数据，也不会备份数据，发送数据也不关心对方是否正确的接收到数据了。</p>
+<p>再者网络环境时好时坏，但是UDP因为没有拥塞控制，一直会以恒定的速度发送数据。即使网络条件不好，也不会对发送频率进行调整。这样实现的弊端就是在网络条件不好的情况下可能会导致丢包，但优点也很明显，在某些实时性要求高的场景（比如电话会议）就需要使用TCP而不是UDP。</p>
+<p><img src="http://note.youdao.com/yws/res/2916/A2D28B6AB7B64D3C914C89C98779328E" alt="image"></p>
+<p>从上面的动态图可以得知，UDP只会把想发的数据报文一股脑的丢给对方，而并不在意数据有无安全完整的到达。</p>
+<h3 id="5-头部开销小，传输数据报文时很高效"><a href="#5-头部开销小，传输数据报文时很高效" class="headerlink" title="5. 头部开销小，传输数据报文时很高效"></a>5. 头部开销小，传输数据报文时很高效</h3><p><img src="http://note.youdao.com/yws/res/2923/DFEB4631C59F4C24AA5C9B56F1E95301" alt="image"></p>
+<p>UDP头部包含以下部分：</p>
+<ul>
+<li>两个十六位的端口号，分别为源端口（可选字段）和目标端口</li>
+<li>整个数据报文的长度</li>
+<li>整个数据报文的检验和（IPv4 可选 字段），改zi’duan字段用于发现头部信息和数据中的错误。</li>
+</ul>
+<p>因为UDP得头部开销小，只有八字节，相比TCP的至少二十字节少得多，在传输时很高效。</p>
+<h2 id="三、TCP"><a href="#三、TCP" class="headerlink" title="三、TCP"></a>三、TCP</h2><p>当一台计算机想要与另一台计算机通讯时，两台计算机之间的通信需要畅通且可靠，这样才能保证正确收发数据。<br>例如，当你想查看网页或电子邮件时，希望完整且按顺序的查看网页，而不丢失任何内容。当你下载文件时，希望获得的是完整的文件，而不仅仅是文件的一部分，因为如果数据丢失或乱序，都不是你希望得到的结果，于是就用到了TCP。</p>
+<h3 id="1-TCP连接过程"><a href="#1-TCP连接过程" class="headerlink" title="1.TCP连接过程"></a>1.TCP连接过程</h3><p><img src="http://note.youdao.com/yws/res/2809/EB331E3E0A29497DA13ACAF949E2CB5E" alt="image"></p>
+<ul>
+<li>第一次握手：客户端发送带有SYN（同步序列号）标志的数据包</li>
+<li>第二次握手：服务端发送带有SYNC/ACK（确认应答）标志的数据包</li>
+<li>第三次握手：客户端发送带有ACK标志的数据包</li>
+</ul>
+<p><img src="http://note.youdao.com/yws/res/2817/BEFE8B7032EC492680B0FA2ED2128587" alt="image"></p>
+<p><strong>为什么要三次握手</strong></p>
+<p>三次握手是的目的是建立可靠的通信信道，简单来说就是数据的发送与接收，而三次握手的最主要目的就是双方确认自己与对方的发送接收是正常的。</p>
+<ul>
+<li>第一次握手： 客户端什么都不能确认，服务端确认对方发送正常</li>
+<li>第二次握手：客户端确认了自己发送、接收正常，对方发送、接收正常；服务端确认了自己接收正常，对方发送正常</li>
+<li>第三次握手：客户端确认了自己发送、接收正常，对方发送接收正常；服务端确认了自己发送、接收正常，对方发送、接收正常。</li>
+</ul>
+<p><strong>为什么要回传SYN</strong></p>
+<p>接收端传回发送端发送的SYN是为了告诉发送端，我接受到的信息确实就是你所发送的信号了。</p>
+<blockquote>
+<p>SYN是TCP/IP建立连接时使用的握手信号。在客户端和服务端之间建立正常的TCP网络连接时，服务端使用SYN-ACK应答表示接收到了这个消息，最后客户端在以ACK（确认字符）消息响应。这样在客户端和服务端之间才能建立起可靠的TCP连接，数据才可以在客户端和服务端之间传递。</p>
+</blockquote>
+<p><strong>传了SYN，为什么还要穿ACK</strong><br>双方通信无误必须是两者互相发送信息都无误。传了SYN，证明发送方到接收方的通道没问题，但是接收方到发送方的通道还需要ACK信号来进行验证。</p>
+<h3 id="1-面向连接"><a href="#1-面向连接" class="headerlink" title="1. 面向连接"></a>1. 面向连接</h3><p>面向连接是指发送数据之前必须在两端建立连接。建立连接的方法是三次握手。</p>
+<h3 id="2-仅支持单播传输"><a href="#2-仅支持单播传输" class="headerlink" title="2. 仅支持单播传输"></a>2. 仅支持单播传输</h3><p>每条TCP传输连接只能有两个端点，只能进行点对点的数据传输，不支持多播和广播。</p>
+<h3 id="3-面向字节流"><a href="#3-面向字节流" class="headerlink" title="3. 面向字节流"></a>3. 面向字节流</h3><p>TCP不像UDP那样一个个报文独立的传输，而是在不保留报文边界的情况下以字节流的方式进行传输。</p>
+<h3 id="4-可靠传输"><a href="#4-可靠传输" class="headerlink" title="4. 可靠传输"></a>4. 可靠传输</h3><p>对于可靠传输，判断丢包，误码靠的是TCP的段编号以及确认信号。TCP为了保证报文传输的可靠性，就给每个包一个序号，同时序号也保证了传送到接收端实体的包的按序接收。<br>然后接收端实体对已成功收到的字节发回一个相应的确认（ACK）；如果发送端实体在合理的往返时延（RTT）内未收到确认，那么对应的数据（将设丢失了）将会被重传。</p>
+<h3 id="5-提供拥塞控制"><a href="#5-提供拥塞控制" class="headerlink" title="5. 提供拥塞控制"></a>5. 提供拥塞控制</h3><p>当网络出现拥塞时，TCP能够减小向网络注入数据的速率和数量，缓解拥塞</p>
+<h3 id="6-提供全双工通信"><a href="#6-提供全双工通信" class="headerlink" title="6. 提供全双工通信"></a>6. 提供全双工通信</h3><p>TCP允许通信双方的应用程序在任何时候都能发送数据，因为TCP连接的两端都设有缓存，用来临时存放双向通信的数据。<br>当然，TCP可以立即发送一个数据段，也可以缓存一段时间以便一次发送跟过的数据段（最大的数据段大小取决于MSS）。</p>
+<h2 id="TCP-与-UDP-的比较"><a href="#TCP-与-UDP-的比较" class="headerlink" title="TCP 与 UDP 的比较"></a>TCP 与 UDP 的比较</h2><table>
+<thead>
+<tr>
+<th></th>
+<th>UDP</th>
+<th>TCP</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>是否连接</td>
+<td>无连接</td>
+<td>面向连接</td>
+</tr>
+<tr>
+<td>是否可靠</td>
+<td>不可靠传输，不使用流量控制和拥塞控制</td>
+<td>可靠传输，使用流量控制和拥塞控制</td>
+</tr>
+<tr>
+<td>连接对象个数</td>
+<td>支持一对一、一对多、多对一、多对多交互通信</td>
+<td>只能是一对一通信</td>
+</tr>
+<tr>
+<td>传输方式</td>
+<td>面向报文</td>
+<td>面向字节流</td>
+</tr>
+<tr>
+<td>首部开销</td>
+<td>首部开销小，仅8字节</td>
+<td>首部最小20字节，最大60字节</td>
+</tr>
+<tr>
+<td>适用场景</td>
+<td>适用于实时应用，如电话会议</td>
+<td>适用于要求可靠传输的应用，如文件传输</td>
+</tr>
+</tbody></table>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><ul>
+<li>TCP向上层提供面向连接的可靠服务，UTP向上层提供无连接不可靠的服务</li>
+<li>虽然UDP没有TCP传输来的准确，但在很多实时性要求高的地方有所作为。</li>
+<li>对数据准确性要求高，速度可以相对较慢的，可以选用TCP</li>
+</ul>
+<blockquote>
+<p>文章内容收集自网络</p>
+</blockquote>
+</div><!--!--></article></div><!--!--><nav class="post-navigation mt-4 level is-mobile"><div class="level-start"><a class="article-nav-prev level level-item link-muted" href="/2020/01/06/mongodb-charts/"><i class="level-item fas fa-chevron-left"></i><span class="level-item">MongoDB-Charts可视化图表分析工具安装使用</span></a></div><div class="level-end"><a class="article-nav-next level level-item link-muted" href="/2019/10/06/redis-rdb-aof/"><span class="level-item">Redis持久化 - 笔记</span><i class="level-item fas fa-chevron-right"></i></a></div></nav><!--!--></div><div class="column column-left is-4-tablet is-4-desktop is-4-widescreen  order-1"><div class="card widget"><div class="card-content"><nav class="level"><div class="level-item has-text-centered flex-shrink-1"><div><figure class="image is-128x128 mx-auto mb-2"><img class="avatar is-rounded" src="http://images.mokeee.com/20200219002636.jpg" alt="Pandaxnm"></figure><p class="title is-size-4 is-block line-height-inherit">Pandaxnm</p><p class="is-size-6 is-block">折腾不止</p><p class="is-size-6 is-flex justify-content-center"><i class="fas fa-map-marker-alt mr-1"></i><span>北京</span></p></div></div></nav><nav class="level is-mobile"><div class="level-item has-text-centered is-marginless"><div><p class="heading">文章</p><a href="/archives"><p class="title">5</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">分类</p><a href="/categories"><p class="title">2</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">标签</p><a href="/tags"><p class="title">1</p></a></div></div></nav><div class="level"><a class="level-item button is-primary is-rounded" href="https://github.com/pandaxnm" target="_blank" rel="noopener">关注我</a></div><div class="level is-mobile"><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="Github" href="https://github.com/pandaxnm"><i class="fab fa-github"></i></a><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="RSS" href="/"><i class="fas fa-rss"></i></a></div></div></div><!--!--><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">链接</h3><ul class="menu-list"><li><a class="level is-mobile is-mobile" href="https://hexo.io" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Hexo</span></span><span class="level-right"><span class="level-item tag">hexo.io</span></span></a></li><li><a class="level is-mobile is-mobile" href="https://bulma.io" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Bulma</span></span><span class="level-right"><span class="level-item tag">bulma.io</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">分类</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/categories/MongoDB/"><span class="level-start"><span class="level-item">MongoDB</span></span><span class="level-end"><span class="level-item tag">2</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/React-Native/"><span class="level-start"><span class="level-item">React Native</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><h3 class="menu-label">最新文章</h3><article class="media"><div class="media-content size-small"><p><time dateTime="2020-02-29T08:45:35.000Z">2020-02-29</time></p><p class="title is-6"><a class="link-muted" href="/2020/02/29/mongodb-install/">MongoDB安装和简单实用</a></p><p class="is-uppercase"><a class="link-muted" href="/categories/MongoDB/">MongoDB</a></p></div></article><article class="media"><div class="media-content size-small"><p><time dateTime="2020-02-29T07:18:33.000Z">2020-02-29</time></p><p class="title is-6"><a class="link-muted" href="/2020/02/29/react-native-theme/">React Native实现主题切换</a></p><p class="is-uppercase"><a class="link-muted" href="/categories/React-Native/">React Native</a></p></div></article><article class="media"><div class="media-content size-small"><p><time dateTime="2020-01-06T06:05:37.000Z">2020-01-06</time></p><p class="title is-6"><a class="link-muted" href="/2020/01/06/mongodb-charts/">MongoDB-Charts可视化图表分析工具安装使用</a></p><p class="is-uppercase"><a class="link-muted" href="/categories/MongoDB/">MongoDB</a></p></div></article><article class="media"><div class="media-content size-small"><p><time dateTime="2019-11-13T13:02:29.000Z">2019-11-13</time></p><p class="title is-6"><a class="link-muted" href="/2019/11/13/tcp-udp/">TCP、UDP协议及其区别</a></p><p class="is-uppercase"></p></div></article><article class="media"><div class="media-content size-small"><p><time dateTime="2019-10-06T09:53:54.000Z">2019-10-06</time></p><p class="title is-6"><a class="link-muted" href="/2019/10/06/redis-rdb-aof/">Redis持久化 - 笔记</a></p><p class="is-uppercase"></p></div></article></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">归档</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/archives/2020/02/"><span class="level-start"><span class="level-item">二月 2020</span></span><span class="level-end"><span class="level-item tag">2</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2020/01/"><span class="level-start"><span class="level-item">一月 2020</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2019/11/"><span class="level-start"><span class="level-item">十一月 2019</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2019/10/"><span class="level-start"><span class="level-item">十月 2019</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">标签</h3><div class="field is-grouped is-grouped-multiline"><div class="control"><a class="tags has-addons" href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"><span class="tag">数据库</span><span class="tag is-grey-lightest">1</span></a></div></div></div></div></div></div><!--!--></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/"><img src="/img/blog-icon.png" alt="小熊" height="28"></a><p class="size-small"><span>&copy; 2020 John Doe</span>  Powered by <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank" rel="noopener">Icarus</a></p></div><div class="level-end"><div class="field has-addons"><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Attribution 4.0 International" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/ppoffice/hexo-theme-icarus"><i class="fab fa-github"></i></a></p></div></div></div></div></footer><script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/min/moment-with-locales.min.js"></script><script>moment.locale("zh-CN");</script><script>var IcarusThemeSettings = {
+            site: {
+                url: 'http://yoursite.com',
+                external_link: {"enable":true,"exclude":[]}
+            },
+            article: {
+                highlight: {
+                    clipboard: true,
+                    fold: 'unfolded'
+                }
+            }
+        };</script><script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js" defer></script><a id="back-to-top" title="回到顶端" href="javascript:;"><i class="fas fa-chevron-up"></i></a><script src="/js/back_to_top.js" defer></script><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/js/lightgallery.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js" defer></script><script>window.addEventListener("load", () => {
+            if (typeof $.fn.lightGallery === 'function') {
+                $('.article').lightGallery({ selector: '.gallery-item' });
+            }
+            if (typeof $.fn.justifiedGallery === 'function') {
+                if ($('.justified-gallery > p > .gallery-item').length) {
+                    $('.justified-gallery > p > .gallery-item').unwrap();
+                }
+                $('.justified-gallery').justifiedGallery();
+            }
+        });</script><!--!--><!--!--><!--!--><script src="/js/main.js" defer></script><div class="searchbox"><div class="searchbox-container"><div class="searchbox-header"><div class="searchbox-input-container"><input class="searchbox-input" type="text" placeholder="想要查找什么..."></div><a class="searchbox-close" href="javascript:;">×</a></div><div class="searchbox-body"></div></div></div><script src="/js/insight.js" defer></script><script>document.addEventListener('DOMContentLoaded', function () {
+            loadInsight({"contentUrl":"/content.json"}, {"hint":"想要查找什么...","untitled":"(无标题)","posts":"文章","pages":"页面","categories":"分类","tags":"标签"});
+        });</script></body></html>
