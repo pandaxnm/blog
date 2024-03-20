@@ -1,9 +1,6 @@
 ---
 title: Admob广告 内容映射实践
 date: 2023-08-07 12:16:21
-img: https://images.mokeee.com/202308071224260.png
-cover: true
-coverImg: https://images.mokeee.com/202308071224260.png
 categories: 技术
 tags: 
 - Admob
